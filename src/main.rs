@@ -1,8 +1,7 @@
 use macroquad::prelude::*;
 use rayon::prelude::*;
+use macroquad::models::{Vertex, Mesh};
 
-
-// Particle struct
 struct Particle {
     x: f32,
     y: f32,
@@ -10,39 +9,21 @@ struct Particle {
     vy: f32,
 }
 
-
-
 #[macroquad::main("Particle System")]
 async fn main() {
-    let mut particles: Vec<Particle> = (0..200_000)
+    let mut particles: Vec<Particle> = (0..100_000)
         .map(|_| Particle {
             x: rand::gen_range(0.0, screen_width()),
-            y: rand::gen_range(0.0, screen_height() /2.0),
+            y: rand::gen_range(0.0, screen_height()),
             vx: rand::gen_range(-1.0, 1.0) * 2.0,
             vy: rand::gen_range(-1.0, 1.0) * 2.0,
         })
         .collect();
 
-    let gridx_divisions = 10;
-    let gridy_divisions = 10;
-    
-    let wall_bounce_factor = 1.0;
-
-    let mut grid: Vec<Vec<Vec<usize>>> = vec![vec![vec![]; gridy_divisions]; gridx_divisions];
-
-
     loop {
-        // grid logic
-        //let grid_width = screen_width() / gridx_divisions as f32; // recalculate grid sizes in case the user resized the window
-        //let grid_height = screen_height() / gridy_divisions as f32;
-
-        // initialize grid
-        // x, y, particle index
-
-
         clear_background(BLACK);
 
-        // prcocesses in parrallel
+        // Update particles in parallel
         particles.par_iter_mut().for_each(|p| {
             p.x += p.vx;
             p.y += p.vy;
@@ -53,17 +34,22 @@ async fn main() {
             if p.y < 0.0 { p.y = 0.0; p.vy *= -1.0; }
         });
 
-        
-        let mut vertices = Vec::with_capacity(particles.len() * 4); // 4 vertices per quad
-            
-        for p in &particles {
-            vertices.push(Vertex { position: vec2(p.x, p.y), color: WHITE });
-            vertices.push(Vertex { position: vec2(p.x+1.0, p.y), color: WHITE });
-            vertices.push(Vertex { position: vec2(p.x+1.0, p.y+1.0), color: WHITE });
-            vertices.push(Vertex { position: vec2(p.x, p.y+1.0), color: WHITE });
-        }
-        
-        draw_mesh(&Mesh { vertices, indices: (0..vertices.len() as u16).collect(), mode: MeshMode::Triangles, texture: None });
+        // Create vertices for all particles
+        let vertices: Vec<Vertex> = particles.iter().map(|p| Vertex {
+            position: [p.x, p.y, 0.0],
+            uv: [0.0, 0.0],
+            color: WHITE.into(),
+        }).collect();
+
+        // Indices for points
+        let indices: Vec<u16> = (0..particles.len() as u16).collect();
+
+        // Draw all particles as points using a Mesh
+        let mesh = Mesh {
+            vertices,
+            indices,
+        };
+        draw_mesh(&mesh);
 
         next_frame().await;
     }
