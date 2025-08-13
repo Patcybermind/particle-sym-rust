@@ -1,4 +1,6 @@
 use macroquad::prelude::*;
+use rayon::prelude::*;
+
 
 // Particle struct
 struct Particle {
@@ -12,7 +14,7 @@ struct Particle {
 
 #[macroquad::main("Particle System")]
 async fn main() {
-    let mut particles: Vec<Particle> = (0..100_000)
+    let mut particles: Vec<Particle> = (0..200_000)
         .map(|_| Particle {
             x: rand::gen_range(0.0, screen_width()),
             y: rand::gen_range(0.0, screen_height() /2.0),
@@ -40,18 +42,28 @@ async fn main() {
 
         clear_background(BLACK);
 
-        for p in &mut particles {
+        // prcocesses in parrallel
+        particles.par_iter_mut().for_each(|p| {
             p.x += p.vx;
             p.y += p.vy;
 
-            if p.x > screen_width() { p.x = screen_width(); p.vx *= -wall_bounce_factor * rand::gen_range(0.9, 1.1); }
-            if p.x < 0.0 { p.x = 0.0; p.vx *= -wall_bounce_factor * rand::gen_range(0.9, 1.1); }
-            if p.y > screen_height() { p.y = screen_height(); p.vy *= -wall_bounce_factor * rand::gen_range(0.9, 1.1); }
-            if p.y < 0.0 { p.y = 0.0; p.vy *= -wall_bounce_factor * rand::gen_range(0.9, 1.1); }
+            if p.x > screen_width() { p.x = screen_width(); p.vx *= -1.0; }
+            if p.x < 0.0 { p.x = 0.0; p.vx *= -1.0; }
+            if p.y > screen_height() { p.y = screen_height(); p.vy *= -1.0; }
+            if p.y < 0.0 { p.y = 0.0; p.vy *= -1.0; }
+        });
 
-            draw_rectangle(p.x, p.y, 1.0, 1.0, WHITE);
-
+        
+        let mut vertices = Vec::with_capacity(particles.len() * 4); // 4 vertices per quad
+            
+        for p in &particles {
+            vertices.push(Vertex { position: vec2(p.x, p.y), color: WHITE });
+            vertices.push(Vertex { position: vec2(p.x+1.0, p.y), color: WHITE });
+            vertices.push(Vertex { position: vec2(p.x+1.0, p.y+1.0), color: WHITE });
+            vertices.push(Vertex { position: vec2(p.x, p.y+1.0), color: WHITE });
         }
+        
+        draw_mesh(&Mesh { vertices, indices: (0..vertices.len() as u16).collect(), mode: MeshMode::Triangles, texture: None });
 
         next_frame().await;
     }
