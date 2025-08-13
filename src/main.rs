@@ -14,8 +14,8 @@ async fn main() {
         .map(|_| Particle {
             x: rand::gen_range(0.0, screen_width()),
             y: rand::gen_range(0.0, screen_height() /2.0),
-            vx: rand::gen_range(-1.0, 1.0),
-            vy: rand::gen_range(-1.0, 1.0),
+            vx: rand::gen_range(-1.0, 1.0) * 2.0,
+            vy: rand::gen_range(-1.0, 1.0) * 2.0,
         })
         .collect();
 
