@@ -22,7 +22,9 @@ async fn main() {
 
     let gridx_divisions = 10;
     let gridy_divisions = 10;
-
+    
+    let gravity_factor = 0.1; // gravity acceleration more is more gravity
+    let damping_factor = 0.2; // damping factor for collisions less is more damping
     let wall_bounce_factor = 0.7;
 
     loop {
@@ -61,8 +63,10 @@ async fn main() {
             new_p.vx *= 0.99; // apply some friction
             new_p.vy *= 0.99;
 
+            
+
             // gravity
-            new_p.vy += 0.09; // apply gravity
+            new_p.vy += gravity_factor; // apply gravity
 
             // collision with other particles
             // check the grid cell of the particle
@@ -86,10 +90,10 @@ async fn main() {
                     let speed_other = (other_p.vx.powi(2) + other_p.vy.powi(2)).sqrt();
 
                     // calculate new velocities based on elastic collision
-                    new_p.vx += speed_other * angle.cos() * 0.5; // damping factor
-                    new_p.vy += speed_other * angle.sin() * 0.5;
-                    new_p.vx -= speed_self * angle.cos() * 0.5; // damping factor
-                    new_p.vy -= speed_self * angle.sin() * 0.5;
+                    new_p.vx += speed_other * angle.cos() * damping_factor; // damping factor
+                    new_p.vy += speed_other * angle.sin() * damping_factor;
+                    new_p.vx -= speed_self * angle.cos() * damping_factor; // damping factor
+                    new_p.vy -= speed_self * angle.sin() * damping_factor;
                 }
             }
             
