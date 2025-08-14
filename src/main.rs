@@ -70,59 +70,60 @@ async fn main() {
         // Second pass: handle collisions
         for gx in 0..gridx_divisions {
             for gy in 0..gridy_divisions {
-                // check this cell and neighboring cells
-                for dx_cell in 0..=1 {
-                    for dy_cell in 0..=1 {
-                        let nx = gx + dx_cell;
-                        let ny = gy + dy_cell;
-                        if nx >= gridx_divisions || ny >= gridy_divisions {
-                            continue;
-                        }
+                let cell = &grid[gx][gy];
 
-                        let cell = &grid[gx][gy];
-                        let neighbor = &grid[nx][ny];
+                // Check current cell + left/right/top/bottom neighbors
+                let neighbor_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)];
+                for &(dx_cell, dy_cell) in &neighbor_offsets {
+                    let nx = gx as isize + dx_cell;
+                    let ny = gy as isize + dy_cell;
 
-                        for &a_idx in cell {
-                            for &b_idx in neighbor {
-                                if a_idx >= b_idx {
-                                    continue; // avoid double counting
-                                }
+                    if nx < 0 || nx >= gridx_divisions as isize || ny < 0 || ny >= gridy_divisions as isize {
+                        continue;
+                    }
 
-                                let (a, b) = if a_idx < b_idx {
-                                    let (left, right) = particles.split_at_mut(b_idx);
-                                    (&mut left[a_idx], &mut right[0])
-                                } else {
-                                    let (left, right) = particles.split_at_mut(a_idx);
-                                    (&mut right[0], &mut left[b_idx])
-                                };
+                    let neighbor = &grid[nx as usize][ny as usize];
 
-                                let dx = b.x - a.x;
-                                let dy = b.y - a.y;
-                                let distance = (dx * dx + dy * dy).sqrt();
+                    for &a_idx in cell {
+                        for &b_idx in neighbor {
+                            if a_idx >= b_idx {
+                                continue; // avoid double counting
+                            }
 
-                                if distance < min_distance && distance > 0.0 {
-                                    let overlap = (min_distance - distance) * 0.45; // adjust overlap factor as needed
-                                    let nx = dx / distance;
-                                    let ny = dy / distance;
+                            let (a, b) = if a_idx < b_idx {
+                                let (left, right) = particles.split_at_mut(b_idx);
+                                (&mut left[a_idx], &mut right[0])
+                            } else {
+                                let (left, right) = particles.split_at_mut(a_idx);
+                                (&mut right[0], &mut left[b_idx])
+                            };
 
-                                    // push apart
-                                    a.x -= nx * overlap;
-                                    a.y -= ny * overlap;
-                                    b.x += nx * overlap;
-                                    b.y += ny * overlap;
+                            let dx = b.x - a.x;
+                            let dy = b.y - a.y;
+                            let distance = (dx * dx + dy * dy).sqrt();
 
-                                    // velocity adjustment along collision normal
-                                    let dvx = b.vx - a.vx;
-                                    let dvy = b.vy - a.vy;
-                                    let rel_vel = dvx * nx + dvy * ny;
+                            if distance < min_distance && distance > 0.0 {
+                                let overlap = (min_distance - distance) * 0.45; 
+                                let nx = dx / distance;
+                                let ny = dy / distance;
 
-                                    if rel_vel < 0.0 {
-                                        let impulse = -rel_vel * 0.999; // equal mass
-                                        a.vx -= impulse * nx;
-                                        a.vy -= impulse * ny;
-                                        b.vx += impulse * nx;
-                                        b.vy += impulse * ny;
-                                    }
+                                // push apart
+                                a.x -= nx * overlap;
+                                a.y -= ny * overlap;
+                                b.x += nx * overlap;
+                                b.y += ny * overlap;
+
+                                // velocity adjustment along collision normal
+                                let dvx = b.vx - a.vx;
+                                let dvy = b.vy - a.vy;
+                                let rel_vel = dvx * nx + dvy * ny;
+
+                                if rel_vel < 0.0 {
+                                    let impulse = -rel_vel * 1.0; // equal mass
+                                    a.vx -= impulse * nx;
+                                    a.vy -= impulse * ny;
+                                    b.vx += impulse * nx;
+                                    b.vy += impulse * ny;
                                 }
                             }
                         }
