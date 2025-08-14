@@ -58,16 +58,20 @@ async fn main() {
             new_p.vx = p.vx; // copy current velocity
             new_p.vy = p.vy; // copy current velocity
 
-            //new_p.vx *= 0.99; // apply some friction
-            //new_p.vy *= 0.99;
+            new_p.vx *= 0.99; // apply some friction
+            new_p.vy *= 0.99;
 
             // gravity
-            new_p.vy += 0.04; // apply gravity
+            new_p.vy += 0.09; // apply gravity
 
             // collision with other particles
             // check the grid cell of the particle
-            let lgx = ((new_p.x / screen_width()) * gridx_divisions as f32).floor() as isize; // local grid cell x
-            let lgy = ((new_p.y / screen_height()) * gridy_divisions as f32).floor() as isize;
+            let lgx = (((new_p.x / screen_width()) * gridx_divisions as f32).floor() as isize)
+                .clamp(0, 9);
+
+            let lgy = (((new_p.y / screen_height()) * gridy_divisions as f32).floor() as isize)
+                .clamp(0, 9);
+
 
             //for other_particle in our grid cell
             for other_particle_index in grid[lgx as usize][lgy as usize].iter() {
@@ -76,7 +80,7 @@ async fn main() {
                 
                 // calculate circular distance
                 let distance_to_other = ((new_p.x - other_p.x).powi(2) + (new_p.y - other_p.y).powi(2)).sqrt();
-                if distance_to_other < 5 { // if too close, calculate the resulting velocity (depends on the starting velocity of both particles and damping amount)
+                if distance_to_other < 5.0 { // if too close, calculate the resulting velocity (depends on the starting velocity of both particles and damping amount)
                     let angle = (other_p.y - new_p.y).atan2(other_p.x - new_p.x);
                     let speed_self = (new_p.vx.powi(2) + new_p.vy.powi(2)).sqrt();
                     let speed_other = (other_p.vx.powi(2) + other_p.vy.powi(2)).sqrt();
