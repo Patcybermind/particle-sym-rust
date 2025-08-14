@@ -11,7 +11,7 @@ struct Particle {
 
 #[macroquad::main("Particle System")]
 async fn main() {
-    let mut particles: Vec<Particle> = (0..1000)
+    let mut particles: Vec<Particle> = (0..10000)
         .map(|_| Particle {
             x: rand::gen_range(0.0, screen_width()),
             y: rand::gen_range(0.0, screen_height() / 2.0),
@@ -20,12 +20,12 @@ async fn main() {
         })
         .collect();
 
-    let gridx_divisions = 10;
-    let gridy_divisions = 10;
+    let gridx_divisions = 15;
+    let gridy_divisions = 15;
     
     let gravity_factor = 0.1; // gravity acceleration more is more gravity
-    let damping_factor = 0.2; // damping factor for collisions less is more damping
-    let wall_bounce_factor = 0.7;
+    let damping_factor = 0.15; // damping factor for collisions less is more damping
+    let wall_bounce_factor = 0.6;
 
     loop {
         // grid logic
@@ -71,10 +71,10 @@ async fn main() {
             // collision with other particles
             // check the grid cell of the particle
             let lgx = (((new_p.x / screen_width()) * gridx_divisions as f32).floor() as isize)
-                .clamp(0, 9);
+                .clamp(0, gridx_divisions as isize - 1);
 
             let lgy = (((new_p.y / screen_height()) * gridy_divisions as f32).floor() as isize)
-                .clamp(0, 9);
+                .clamp(0, gridy_divisions as isize - 1);
 
 
             //for other_particle in our grid cell
