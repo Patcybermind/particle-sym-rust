@@ -100,17 +100,31 @@ async fn main() {
                 let distance_to_other = ((new_p.x - other_p.x).powi(2) + (new_p.y - other_p.y).powi(2)).sqrt();
 
                 if distance_to_other < min_distance && distance_to_other > 0.0 {
-                    let overlap = min_distance - distance_to_other;
-
-                    // direction from other to self
-                    let dx = (new_p.x - other_p.x) / distance_to_other;
-                    let dy = (new_p.y - other_p.y) / distance_to_other;
+                    let overlap = (min_distance - distance_to_other) / 2.0;
+                    let dx = (p.x - other_p.x) / distance_to_other;
+                    let dy = (p.y - other_p.y) / distance_to_other;
                 
-                    // move each particle half the overlap (if the other is movable)
-                    new_p.x += dx * (overlap / 2.0);
-                    new_p.y += dy * (overlap / 2.0);
-                    // NOTE: If you also want to move the "other" particle, you'd need to modify `new_particles[*other_particle_index]`
+                    // Borrow both particles without overlap
+                    let (first, second) = new_particles.split_at_mut(i.max(*other_particle_index));
+                    let (a, b) = if i < *other_particle_index {
+                        (&mut first[i], &mut second[0])
+                    } else {
+                        (&mut second[0], &mut first[*other_particle_index])
+                    };
+                
+                    // Push both apart
+                    a.x += dx * overlap;
+                    a.y += dy * overlap;
+                    b.x -= dx * overlap;
+                    b.y -= dy * overlap;
+                
+                    // Optional: dampen velocity just for collisions
+                    a.vx *= 0.98;
+                    a.vy *= 0.98;
+                    b.vx *= 0.98;
+                    b.vy *= 0.98;
                 }
+
             }
             
             let offset_amount = 1.0; // offset amount for the bottom wall
