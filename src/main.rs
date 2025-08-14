@@ -23,9 +23,9 @@ async fn main() {
     let gridx_divisions = 15;
     let gridy_divisions = 30;
     
-    let gravity_factor = 0.1; // gravity acceleration more is more gravity
-    let damping_factor = 0.15; // damping factor for collisions less is more damping
-    let wall_bounce_factor = 0.6;
+    let gravity_factor = 0.2; // gravity acceleration more is more gravity
+    let damping_factor = 0.0; // damping factor for collisions less is more damping
+    let wall_bounce_factor = 0.4;
 
     loop {
         // grid logic
@@ -84,7 +84,7 @@ async fn main() {
                 
                 // calculate circular distance
                 let distance_to_other = ((new_p.x - other_p.x).powi(2) + (new_p.y - other_p.y).powi(2)).sqrt();
-                if distance_to_other < 5.0 { // if too close, calculate the resulting velocity (depends on the starting velocity of both particles and damping amount)
+                if distance_to_other < 8.0 { // if too close, calculate the resulting velocity (depends on the starting velocity of both particles and damping amount)
                     let angle = (other_p.y - new_p.y).atan2(other_p.x - new_p.x);
                     let speed_self = (new_p.vx.powi(2) + new_p.vy.powi(2)).sqrt();
                     let speed_other = (other_p.vx.powi(2) + other_p.vy.powi(2)).sqrt();
@@ -95,24 +95,40 @@ async fn main() {
                     new_p.vx -= speed_self * angle.cos() * damping_factor; // damping factor
                     new_p.vy -= speed_self * angle.sin() * damping_factor;
                 }
+                
+                let min_distance = 8.0;
+                let distance_to_other = ((new_p.x - other_p.x).powi(2) + (new_p.y - other_p.y).powi(2)).sqrt();
+
+                if distance_to_other < min_distance && distance_to_other > 0.0 {
+                    let overlap = min_distance - distance_to_other;
+
+                    // direction from other to self
+                    let dx = (new_p.x - other_p.x) / distance_to_other;
+                    let dy = (new_p.y - other_p.y) / distance_to_other;
+                
+                    // move each particle half the overlap (if the other is movable)
+                    new_p.x += dx * (overlap / 2.0);
+                    new_p.y += dy * (overlap / 2.0);
+                    // NOTE: If you also want to move the "other" particle, you'd need to modify `new_particles[*other_particle_index]`
+                }
             }
             
-
+            let offset_amount = 1.0; // offset amount for the bottom wall
             // collision with walls
             if new_p.x > screen_width() { 
-                new_p.x = screen_width(); 
+                new_p.x = screen_width() - offset_amount; 
                 new_p.vx *= -wall_bounce_factor * rand::gen_range(0.9, 1.1); 
             }
             if new_p.x < 0.0 { 
-                new_p.x = 0.0; 
+                new_p.x = 0.0 + offset_amount; 
                 new_p.vx *= -wall_bounce_factor * rand::gen_range(0.9, 1.1); 
             }
             if new_p.y > screen_height() { 
-                new_p.y = screen_height(); 
+                new_p.y = screen_height() - offset_amount; 
                 new_p.vy *= -wall_bounce_factor * rand::gen_range(0.9, 1.1); 
             }
             if new_p.y < 0.0 { 
-                new_p.y = 0.0; 
+                new_p.y = 0.0 + offset_amount; 
                 new_p.vy *= -wall_bounce_factor * rand::gen_range(0.9, 1.1); 
             }
 
