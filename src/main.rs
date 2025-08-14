@@ -11,7 +11,7 @@ struct Particle {
 
 #[macroquad::main("Particle System")]
 async fn main() {
-    let mut particles: Vec<Particle> = (0..10000)
+    let mut particles: Vec<Particle> = (0..3000)
         .map(|_| Particle {
             x: rand::gen_range(0.0, screen_width()),
             y: rand::gen_range(0.0, screen_height() / 2.0),
@@ -21,7 +21,7 @@ async fn main() {
         .collect();
 
     let gridx_divisions = 15;
-    let gridy_divisions = 15;
+    let gridy_divisions = 30;
     
     let gravity_factor = 0.1; // gravity acceleration more is more gravity
     let damping_factor = 0.15; // damping factor for collisions less is more damping
