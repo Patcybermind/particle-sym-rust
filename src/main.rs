@@ -10,7 +10,7 @@ struct Particle {
 
 #[macroquad::main("Particle System")]
 async fn main() {
-    let mut particles: Vec<Particle> = (0..300)
+    let mut particles: Vec<Particle> = (0..3000)
         .map(|_| Particle {
             x: rand::gen_range(0.0, screen_width()),
             y: rand::gen_range(0.0, screen_height() / 2.0),
@@ -20,11 +20,10 @@ async fn main() {
         .collect();
 
     let gridx_divisions = 15;
-    let gridy_divisions = 30;
-    let gravity_factor = 0.2;
-    let damping_factor = 0.7;
-    let wall_bounce_factor = 0.4;
-    let min_distance = 8.0;
+    let gridy_divisions = 15;
+    let gravity_factor = 0.25;
+    let wall_bounce_factor = 0.9;
+    let min_distance = 15.0;
 
     loop {
         clear_background(BLACK);
@@ -41,8 +40,8 @@ async fn main() {
 
         // First pass: update positions and velocities
         for p in &mut particles {
-            p.vx *= 0.99; // friction
-            p.vy *= 0.99;
+            p.vx *= 0.999; // friction
+            p.vy *= 0.999;
 
             p.vy += gravity_factor; // gravity
             p.x += p.vx;
@@ -50,60 +49,82 @@ async fn main() {
 
             // wall collisions
             let offset = 2.0;
-            if p.x > screen_width() - offset{
+            if p.x > screen_width() - offset {
                 p.x = screen_width() - offset;
-                p.vx *= -wall_bounce_factor * 1.0 //rand::gen_range(0.9, 1.1);
+                p.vx *= -wall_bounce_factor;
             }
-            if p.x < 0.0 + offset{
+            if p.x < offset {
                 p.x = offset;
-                p.vx *= -wall_bounce_factor * 1.0 //rand::gen_range(0.9, 1.1);
+                p.vx *= -wall_bounce_factor;
             }
-            if p.y > screen_height() - offset{
+            if p.y > screen_height() - offset {
                 p.y = screen_height() - offset;
-                p.vy *= -wall_bounce_factor * 1.0 //rand::gen_range(0.9, 1.1);
+                p.vy *= -wall_bounce_factor;
             }
-            if p.y < 0.0 + offset {
+            if p.y < offset {
                 p.y = offset;
-                p.vy *= -wall_bounce_factor * 1.0 //rand::gen_range(0.9, 1.1);
+                p.vy *= -wall_bounce_factor;
             }
         }
 
         // Second pass: handle collisions
         for gx in 0..gridx_divisions {
             for gy in 0..gridy_divisions {
-                let cell = &grid[gx][gy];
-                for i in 0..cell.len() {
-                    for j in (i + 1)..cell.len() {
-                        let a_idx = cell[i];
-                        let b_idx = cell[j];
+                // check this cell and neighboring cells
+                for dx_cell in 0..=1 {
+                    for dy_cell in 0..=1 {
+                        let nx = gx + dx_cell;
+                        let ny = gy + dy_cell;
+                        if nx >= gridx_divisions || ny >= gridy_divisions {
+                            continue;
+                        }
 
-                        let (a, b) = if a_idx < b_idx {
-                            let (left, right) = particles.split_at_mut(b_idx);
-                            (&mut left[a_idx], &mut right[0])
-                        } else {
-                            let (left, right) = particles.split_at_mut(a_idx);
-                            (&mut right[0], &mut left[b_idx])
-                        };
+                        let cell = &grid[gx][gy];
+                        let neighbor = &grid[nx][ny];
 
-                        let dx = b.x - a.x;
-                        let dy = b.y - a.y;
-                        let distance = (dx * dx + dy * dy).sqrt();
+                        for &a_idx in cell {
+                            for &b_idx in neighbor {
+                                if a_idx >= b_idx {
+                                    continue; // avoid double counting
+                                }
 
-                        if distance < min_distance && distance > 0.0 {
-                            let overlap = (min_distance - distance) / 2.0;
-                            let nx = dx / distance;
-                            let ny = dy / distance;
+                                let (a, b) = if a_idx < b_idx {
+                                    let (left, right) = particles.split_at_mut(b_idx);
+                                    (&mut left[a_idx], &mut right[0])
+                                } else {
+                                    let (left, right) = particles.split_at_mut(a_idx);
+                                    (&mut right[0], &mut left[b_idx])
+                                };
 
-                            a.x -= nx * overlap;
-                            a.y -= ny * overlap;
-                            b.x += nx * overlap;
-                            b.y += ny * overlap;
+                                let dx = b.x - a.x;
+                                let dy = b.y - a.y;
+                                let distance = (dx * dx + dy * dy).sqrt();
 
-                            // Optional: dampen velocity
-                            a.vx *= 0.99;
-                            a.vy *= 0.99;
-                            b.vx *= 0.99;
-                            b.vy *= 0.99;
+                                if distance < min_distance && distance > 0.0 {
+                                    let overlap = (min_distance - distance) * 0.45; // adjust overlap factor as needed
+                                    let nx = dx / distance;
+                                    let ny = dy / distance;
+
+                                    // push apart
+                                    a.x -= nx * overlap;
+                                    a.y -= ny * overlap;
+                                    b.x += nx * overlap;
+                                    b.y += ny * overlap;
+
+                                    // velocity adjustment along collision normal
+                                    let dvx = b.vx - a.vx;
+                                    let dvy = b.vy - a.vy;
+                                    let rel_vel = dvx * nx + dvy * ny;
+
+                                    if rel_vel < 0.0 {
+                                        let impulse = -rel_vel * 0.999; // equal mass
+                                        a.vx -= impulse * nx;
+                                        a.vy -= impulse * ny;
+                                        b.vx += impulse * nx;
+                                        b.vy += impulse * ny;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
