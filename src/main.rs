@@ -44,6 +44,9 @@ async fn main() {
             }
         }
 
+        // create the new particles to write new data to
+        let mut new_particles = particles.clone();
+
         clear_background(BLACK);
 
         for p in &mut particles {
@@ -60,7 +63,9 @@ async fn main() {
             // check the grid cell of the particle
             let gx = ((p.x / screen_width()) * gridx_divisions as f32).floor() as isize;
             let gy = ((p.y / screen_height()) * gridy_divisions as f32).floor() as isize;
-            println!("Particle at ({}, {}) in grid cell ({}, {})", p.x, p.y, gx, gy);
+            
+            
+
 
             // collision with walls
 
