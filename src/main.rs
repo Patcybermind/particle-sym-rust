@@ -19,9 +19,9 @@ async fn main() {
         })
         .collect();
 
-    let gridx_divisions = 15;
-    let gridy_divisions = 15;
-    let gravity_factor = 0.25;
+    let gridx_divisions = 40;
+    let gridy_divisions = 40;
+    let gravity_factor = 0.18; // reduced gravity
     let wall_bounce_factor = 0.9;
     let min_distance = 15.0;
 
@@ -67,21 +67,23 @@ async fn main() {
             }
         }
 
-        // Second pass: handle collisions
+        // Second pass: handle collisions with 8 neighbors + current cell
+        let neighbor_offsets = [
+            (-1, -1), (0, -1), (1, -1),
+            (-1, 0),  (0, 0),  (1, 0),
+            (-1, 1),  (0, 1),  (1, 1),
+        ];
+
         for gx in 0..gridx_divisions {
             for gy in 0..gridy_divisions {
                 let cell = &grid[gx][gy];
 
-                // Check current cell + left/right/top/bottom neighbors
-                let neighbor_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)];
                 for &(dx_cell, dy_cell) in &neighbor_offsets {
                     let nx = gx as isize + dx_cell;
                     let ny = gy as isize + dy_cell;
-
                     if nx < 0 || nx >= gridx_divisions as isize || ny < 0 || ny >= gridy_divisions as isize {
                         continue;
                     }
-
                     let neighbor = &grid[nx as usize][ny as usize];
 
                     for &a_idx in cell {
@@ -103,7 +105,7 @@ async fn main() {
                             let distance = (dx * dx + dy * dy).sqrt();
 
                             if distance < min_distance && distance > 0.0 {
-                                let overlap = (min_distance - distance) * 0.45; 
+                                let overlap = (min_distance - distance) * 0.55; // stronger overlap
                                 let nx = dx / distance;
                                 let ny = dy / distance;
 
@@ -119,12 +121,19 @@ async fn main() {
                                 let rel_vel = dvx * nx + dvy * ny;
 
                                 if rel_vel < 0.0 {
-                                    let impulse = -rel_vel * 1.0; // equal mass
+                                    let impulse = -rel_vel * 1.0; // fully elastic
                                     a.vx -= impulse * nx;
                                     a.vy -= impulse * ny;
                                     b.vx += impulse * nx;
                                     b.vy += impulse * ny;
                                 }
+
+                                // tangential nudge to prevent vertical stacking
+                                let tangential = 0.03;
+                                a.vx += -ny * tangential;
+                                a.vy += nx * tangential;
+                                b.vx += ny * tangential;
+                                b.vy += -nx * tangential;
                             }
                         }
                     }
