@@ -11,7 +11,7 @@ struct Particle {
 
 #[macroquad::main("Particle System")]
 async fn main() {
-    let mut particles: Vec<Particle> = (0..1)
+    let mut particles: Vec<Particle> = (0..1000)
         .map(|_| Particle {
             x: rand::gen_range(0.0, screen_width()),
             y: rand::gen_range(0.0, screen_height() / 2.0),
@@ -23,7 +23,7 @@ async fn main() {
     let gridx_divisions = 10;
     let gridy_divisions = 10;
 
-    let wall_bounce_factor = 0.4;
+    let wall_bounce_factor = 0.7;
 
     loop {
         // grid logic
@@ -66,8 +66,29 @@ async fn main() {
 
             // collision with other particles
             // check the grid cell of the particle
-            let gx = ((new_p.x / screen_width()) * gridx_divisions as f32).floor() as isize;
-            let gy = ((new_p.y / screen_height()) * gridy_divisions as f32).floor() as isize;
+            let lgx = ((new_p.x / screen_width()) * gridx_divisions as f32).floor() as isize; // local grid cell x
+            let lgy = ((new_p.y / screen_height()) * gridy_divisions as f32).floor() as isize;
+
+            //for other_particle in our grid cell
+            for other_particle_index in grid[lgx as usize][lgy as usize].iter() {
+                if *other_particle_index == i { continue; } // skip self
+                let other_p = &particles[*other_particle_index];
+                
+                // calculate circular distance
+                let distance_to_other = ((new_p.x - other_p.x).powi(2) + (new_p.y - other_p.y).powi(2)).sqrt();
+                if distance_to_other < 5 { // if too close, calculate the resulting velocity (depends on the starting velocity of both particles and damping amount)
+                    let angle = (other_p.y - new_p.y).atan2(other_p.x - new_p.x);
+                    let speed_self = (new_p.vx.powi(2) + new_p.vy.powi(2)).sqrt();
+                    let speed_other = (other_p.vx.powi(2) + other_p.vy.powi(2)).sqrt();
+
+                    // calculate new velocities based on elastic collision
+                    new_p.vx += speed_other * angle.cos() * 0.5; // damping factor
+                    new_p.vy += speed_other * angle.sin() * 0.5;
+                    new_p.vx -= speed_self * angle.cos() * 0.5; // damping factor
+                    new_p.vy -= speed_self * angle.sin() * 0.5;
+                }
+            }
+            
 
             // collision with walls
             if new_p.x > screen_width() { 
